@@ -1,0 +1,9 @@
+[Unit]
+Description=App
+
+[Service]
+PIDFile=/var/run/app/app.pid
+ExecStart=/usr/bin/java -jar /opt/app/app-1.0-SNAPSHOT.jar
+
+[Install]
+WantedBy=multi-user.target

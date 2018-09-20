@@ -1,0 +1,79 @@
+group 'experiments'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.netflix.nebula:gradle-ospackage-plugin:3.4.0'
+    }
+}
+
+apply plugin: 'nebula.ospackage'
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'com.sparkjava:spark-core:2.3'
+    testCompile group: 'junit', name: 'junit', version: '4.+'
+}
+
+jar {
+    manifest {
+        attributes "Main-Class": "app.Server"
+    }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+task customFatJar(type: Jar) {
+    manifest {
+        attributes 'Main-Class': 'app.Server'
+    }
+    baseName = 'all-in-one-jar'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
+ospackage {
+    packageName = 'app'
+    version = '1.0.0'
+    release = '1'
+    user 'app'
+    permissionGroup "app"
+    arch = 'amd64'
+    os = LINUX
+    type 'BINARY'
+
+    preInstall file('scripts/rpm/preInstall.sh')
+    postInstall file('scripts/rpm/postInstall.sh')
+    preUninstall file('scripts/rpm/preUninstall.sh')
+    postUninstall file('scripts/rpm/postUninstall.sh')
+
+    //pega o arquivo .jar gerado e coloca dentro de /lib
+    from(jar.outputs.files) {
+        into '/opt/app'
+    }
+
+    from('install/unix/conf') {
+        into '/opt/app'
+        fileMode = 0755
+    }
+}
+
+buildRpm {
+    link('/usr/local/bin/example-gradle-rpm', '/opt/example-gradle-rpm/bin/example-gradle-rpm.sh')
+}
+
+buildDeb {
+    directory("/opt/app", 0755)
+}
